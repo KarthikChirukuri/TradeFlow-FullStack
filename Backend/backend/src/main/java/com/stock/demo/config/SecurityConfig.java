@@ -1,5 +1,7 @@
 package com.stock.demo.config;
 
+import jakarta.servlet.http.HttpServletResponse;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.Customizer;
@@ -16,40 +18,65 @@ import org.springframework.security.web.SecurityFilterChain;
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
-    
+
     @Bean
-    public PasswordEncoder passwordEncoder(){
+    public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
-    
+
     @Bean
-    public UserDetailsService userDetailsService(){
-        UserDetails user1 = User.withUsername("Karthik").password(passwordEncoder().encode("1234")).build();
-        UserDetails user2 = User.withUsername("NTR").password(passwordEncoder().encode("1234")).roles("USER").build();
-        UserDetails user3 = User.withUsername("user").password(passwordEncoder().encode("1234")).roles("USER").build();
+    public UserDetailsService userDetailsService() {
+
+        UserDetails user1 = User.withUsername("Karthik")
+                .password(passwordEncoder().encode("1234"))
+                .roles("USER")
+                .build();
+
+        UserDetails user2 = User.withUsername("NTR")
+                .password(passwordEncoder().encode("1234"))
+                .roles("USER")
+                .build();
+
+        UserDetails user3 = User.withUsername("user")
+                .password(passwordEncoder().encode("1234"))
+                .roles("USER")
+                .build();
+
         return new InMemoryUserDetailsManager(user1, user2, user3);
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception{
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+
         http
             .cors(Customizer.withDefaults())
-            .csrf(csrf -> csrf.disable()) 
-            .authorizeHttpRequests(
-                auth -> auth           
-                    .requestMatchers("/").permitAll()
-                    .requestMatchers("/fetchHoldings").permitAll()
-                    .requestMatchers("/fetchPositions").hasRole("USER")
-                    // .anyRequest().permitAll()
-                    .anyRequest().authenticated()
+
+            .csrf(csrf -> csrf.disable())
+
+            .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/").permitAll()
+                .requestMatchers("/fetchHoldings").permitAll()
+                .requestMatchers("/fetchPositions").hasRole("USER")
+                .anyRequest().authenticated()
             )
-            // .formLogin(Customizer.withDefaults());
+
+            .exceptionHandling(exception ->
+                exception.authenticationEntryPoint(
+                    (request, response, authException) -> {
+                        response.sendError(
+                            HttpServletResponse.SC_UNAUTHORIZED,
+                            "Unauthorized"
+                        );
+                    }
+                )
+            )
+
             .formLogin(form -> form
                 .successHandler((request, response, authentication) -> {
-                response.setStatus(200);
-            })
-        );
+                    response.setStatus(200);
+                })
+            );
+
         return http.build();
     }
-
 }
